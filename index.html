@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>視覺化計時器</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* 鈴鐺震動動畫 */
@@ -91,10 +92,12 @@
     </style>
 </head>
 
-<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-center p-4 no-select">
+<body
+    class="bg-gray-50 h-[100dvh] md:h-auto md:min-h-[100dvh] overflow-hidden md:overflow-y-auto flex flex-col items-center p-3 sm:p-4 no-select">
 
     <!-- 鬧鐘主體：保持大尺寸 -->
-    <div id="alarmClock" class="relative w-full max-w-[450px] aspect-[120/140] mb-4 transition-transform duration-200">
+    <div id="alarmClock"
+        class="relative w-full max-w-[430px] sm:max-w-[450px] aspect-[120/140] mb-2 sm:mb-4 transition-transform duration-200 shrink-0">
         <svg viewBox="0 0 120 140" class="w-full h-full drop-shadow-2xl overflow-visible clock-body">
             <!-- 支腳 -->
             <path d="M30 115 L20 132" stroke="#334155" stroke-width="5" stroke-linecap="round" />
@@ -117,11 +120,11 @@
             <!-- 錶盤 -->
             <circle cx="60" cy="80" r="48" fill="white" />
 
-            <!-- 錶盤刻度與數字 -->
-            <g id="dialContent"></g>
-
-            <!-- 紅色扇形進度 (參考圖片風格) -->
+            <!-- 紅色扇形進度：先畫，讓刻度能蓋在上面 -->
             <path id="sectorPath" fill="#e11d48" d="" />
+
+            <!-- 錶盤刻度與數字：後畫，浮在紅色扇形上層 -->
+            <g id="dialContent"></g>
 
             <!-- 中心點：現在不會與數字重疊 -->
             <circle cx="60" cy="80" r="2.5" fill="#e11d48" />
@@ -129,59 +132,75 @@
     </div>
 
     <!-- 數位倒數顯示與控制區 -->
-    <div class="flex flex-col items-center w-full max-w-[320px]">
+    <div class="flex flex-col items-center w-full max-w-[320px] flex-1 min-h-0 md:flex-none md:min-h-fit">
 
         <!-- 這裡是數字顯示區域 (平時隱藏，倒數時顯示) -->
-        <div id="countdownDisplay" class="hidden text-7xl font-black text-rose-600 mb-6 tracking-tight">
-            15:00
+        <div id="countdownDisplay"
+            class="hidden text-6xl sm:text-7xl font-black text-rose-600 mb-3 sm:mb-6 tracking-tight">
+            05:00
         </div>
 
         <!-- 這裡是輸入區域 (倒數時隱藏) -->
-        <div id="inputArea" class="bg-white p-6 rounded-[2rem] shadow-sm w-full border border-gray-100 mb-4">
+        <div id="inputArea"
+            class="bg-white p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] shadow-sm w-full border border-gray-100 mb-2 sm:mb-4">
             <div class="flex justify-center items-center gap-4">
-                
+
                 <!-- 分鐘滾輪 -->
                 <div class="flex flex-col items-center">
-                    <div class="relative w-24 h-[150px] picker-mask bg-gray-50 rounded-2xl border-b-4 border-rose-500 overflow-hidden shadow-inner">
-                        <div class="absolute top-1/2 left-0 w-full h-[50px] -translate-y-1/2 bg-gray-200/50 pointer-events-none rounded-xl border border-gray-300"></div>
-                        <ul id="minScroll" class="absolute inset-0 overflow-y-auto snap-y snap-mandatory hide-scroll m-0 p-0 list-none">
+                    <div
+                        class="relative w-20 sm:w-24 h-[132px] sm:h-[150px] picker-mask bg-gray-50 rounded-2xl border-b-4 border-rose-500 overflow-hidden shadow-inner">
+                        <div
+                            class="absolute top-1/2 left-0 w-full h-[44px] -translate-y-1/2 bg-gray-200/50 pointer-events-none rounded-xl border border-gray-300">
+                        </div>
+                        <ul id="minScroll"
+                            class="absolute inset-0 overflow-y-auto snap-y snap-mandatory hide-scroll m-0 p-0 list-none">
                             <!-- JS將會在此填入 -->
                         </ul>
                     </div>
-                    <span class="text-[11px] font-black text-gray-400 mt-3 tracking-widest uppercase">Min</span>
+                    <span
+                        class="text-[10px] sm:text-[11px] font-black text-gray-400 mt-2 sm:mt-3 tracking-widest uppercase">Min</span>
                 </div>
 
-                <div class="text-3xl font-bold text-gray-300 mb-6 animate-pulse">:</div>
+                <div class="text-2xl sm:text-3xl font-bold text-gray-300 mb-5 sm:mb-6 animate-pulse">:</div>
 
                 <!-- 秒數滾輪 -->
                 <div class="flex flex-col items-center">
-                    <div class="relative w-24 h-[150px] picker-mask bg-gray-50 rounded-2xl border-b-4 border-rose-500 overflow-hidden shadow-inner">
-                        <div class="absolute top-1/2 left-0 w-full h-[50px] -translate-y-1/2 bg-gray-200/50 pointer-events-none rounded-xl border border-gray-300"></div>
-                        <ul id="secScroll" class="absolute inset-0 overflow-y-auto snap-y snap-mandatory hide-scroll m-0 p-0 list-none">
+                    <div
+                        class="relative w-20 sm:w-24 h-[132px] sm:h-[150px] picker-mask bg-gray-50 rounded-2xl border-b-4 border-rose-500 overflow-hidden shadow-inner">
+                        <div
+                            class="absolute top-1/2 left-0 w-full h-[44px] -translate-y-1/2 bg-gray-200/50 pointer-events-none rounded-xl border border-gray-300">
+                        </div>
+                        <ul id="secScroll"
+                            class="absolute inset-0 overflow-y-auto snap-y snap-mandatory hide-scroll m-0 p-0 list-none">
                             <!-- JS將會在此填入 -->
                         </ul>
                     </div>
-                    <span class="text-[11px] font-black text-gray-400 mt-3 tracking-widest uppercase">Sec</span>
+                    <span
+                        class="text-[10px] sm:text-[11px] font-black text-gray-400 mt-2 sm:mt-3 tracking-widest uppercase">Sec</span>
                 </div>
 
             </div>
         </div>
 
         <!-- 按鈕控制 -->
-        <div class="w-full space-y-2">
+        <div class="w-full space-y-2 mt-auto md:mt-2 pb-[max(env(safe-area-inset-bottom),0.25rem)]">
             <button id="ctrlBtn"
-                class="w-full bg-rose-600 hover:bg-rose-500 text-white py-4 rounded-3xl text-xl font-black transition-all shadow-md active:scale-95">
+                class="w-full bg-rose-600 hover:bg-rose-500 text-white py-3 sm:py-4 rounded-3xl text-lg sm:text-xl font-black transition-all shadow-md active:scale-95">
                 開始計時
             </button>
             <button id="clearBtn"
                 class="w-full text-gray-300 hover:text-gray-500 font-bold text-xs py-1 transition-colors">
                 RESET
             </button>
+            <div id="soundWarning"
+                class="hidden w-full rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-bold leading-6 text-amber-700">
+            </div>
         </div>
     </div>
 
     <!-- 鬧鐘響起遮罩 -->
-    <div id="alarmMask" class="fixed inset-0 bg-white/95 hidden flex-col items-center justify-center z-50">
+    <div id="alarmMask"
+        class="fixed inset-0 bg-white/95 hidden flex-col items-center justify-center z-50 p-6 text-center">
         <div class="text-rose-600 text-5xl font-black mb-12 animate-bounce">時間到了！</div>
         <button id="stopAlarmBtn"
             class="bg-rose-600 text-white px-16 py-8 rounded-full text-3xl font-black shadow-2xl active:scale-90 transition-transform">
@@ -201,30 +220,34 @@
         const alarmClock = document.getElementById('alarmClock');
         const alarmMask = document.getElementById('alarmMask');
         const stopAlarmBtn = document.getElementById('stopAlarmBtn');
+        const soundWarning = document.getElementById('soundWarning');
+        const DEFAULT_MINUTES = 5;
+        const ITEM_HEIGHT = 44;
 
         let leftSeconds = 0;
         let timer = null;
         let isRunning = false;
         let audioCtx = null;
         let alarmLoop = null;
+        let soundCheckedThisRun = false;
 
         function initPickers() {
-            let minHtml = '<li class="h-[50px] w-full shrink-0"></li>';
-            for (let i = 0; i < 100; i++) {
-                minHtml += `<li class="h-[50px] w-full flex items-center justify-center text-4xl font-black text-gray-700 snap-center no-select cursor-grab active:cursor-grabbing">${String(i).padStart(2, '0')}</li>`;
+            let minHtml = '<li class="h-[44px] w-full shrink-0"></li>';
+            for (let i = 0; i < 60; i++) {
+                minHtml += `<li class="h-[44px] w-full flex items-center justify-center text-3xl sm:text-4xl font-black text-gray-700 snap-center no-select cursor-grab active:cursor-grabbing">${String(i).padStart(2, '0')}</li>`;
             }
-            minHtml += '<li class="h-[50px] w-full shrink-0"></li>';
+            minHtml += '<li class="h-[44px] w-full shrink-0"></li>';
             minScroll.innerHTML = minHtml;
 
-            let secHtml = '<li class="h-[50px] w-full shrink-0"></li>';
+            let secHtml = '<li class="h-[44px] w-full shrink-0"></li>';
             for (let i = 0; i < 60; i++) {
-                secHtml += `<li class="h-[50px] w-full flex items-center justify-center text-4xl font-black text-gray-700 snap-center no-select cursor-grab active:cursor-grabbing">${String(i).padStart(2, '0')}</li>`;
+                secHtml += `<li class="h-[44px] w-full flex items-center justify-center text-3xl sm:text-4xl font-black text-gray-700 snap-center no-select cursor-grab active:cursor-grabbing">${String(i).padStart(2, '0')}</li>`;
             }
-            secHtml += '<li class="h-[50px] w-full shrink-0"></li>';
+            secHtml += '<li class="h-[44px] w-full shrink-0"></li>';
             secScroll.innerHTML = secHtml;
 
             setTimeout(() => {
-                minScroll.scrollTop = 15 * 50;
+                minScroll.scrollTop = DEFAULT_MINUTES * ITEM_HEIGHT;
                 secScroll.scrollTop = 0;
             }, 50);
         }
@@ -242,7 +265,7 @@
                 line.setAttribute("y1", 80 + rIn * Math.sin(angleRad));
                 line.setAttribute("x2", 60 + rOut * Math.cos(angleRad));
                 line.setAttribute("y2", 80 + rOut * Math.sin(angleRad));
-                line.setAttribute("stroke", isMajor ? "#e11d48" : "#cbd5e1");
+                line.setAttribute("stroke", isMajor ? "#1e293b" : "#475569");
                 line.setAttribute("stroke-width", isMajor ? "1" : "0.5");
                 dialContent.appendChild(line);
 
@@ -253,7 +276,7 @@
                     const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
                     text.setAttribute("x", tx);
                     text.setAttribute("y", ty);
-                    text.setAttribute("fill", "#e11d48");
+                    text.setAttribute("fill", "#1e293b");
                     text.setAttribute("font-size", "7.5");
                     text.setAttribute("font-weight", "900");
                     text.setAttribute("text-anchor", "middle");
@@ -287,6 +310,78 @@
             }
         }
 
+        function showSoundWarning(message) {
+            soundWarning.textContent = message;
+            soundWarning.classList.remove('hidden');
+        }
+
+        function hideSoundWarning() {
+            soundWarning.textContent = '';
+            soundWarning.classList.add('hidden');
+        }
+
+        async function playPreviewBeep() {
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, now);
+
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.18, now + 0.01);
+            gain.gain.linearRampToValueAtTime(0, now + 0.22);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.25);
+
+            await new Promise((resolve) => setTimeout(resolve, 260));
+        }
+
+        async function ensureSoundReady() {
+            const AudioCtor = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtor) {
+                showSoundWarning('此裝置不支援聲音播放，請改用支援音訊的瀏覽器。');
+                return false;
+            }
+
+            if (!audioCtx) {
+                audioCtx = new AudioCtor();
+            }
+
+            try {
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+                await playPreviewBeep();
+            } catch (error) {
+                showSoundWarning('目前無法播放測試音，請先開啟手機媒體音量或關閉靜音模式。');
+                alert('目前無法播放測試音，請先開啟手機媒體音量或關閉靜音模式後再開始計時。');
+                return false;
+            }
+
+            if (audioCtx.state !== 'running') {
+                showSoundWarning('音訊尚未啟用，請確認手機聲音已開啟，再重新開始計時。');
+                return false;
+            }
+
+            const heard = window.confirm('已播放測試音。若有聽到聲音請按「確定」，沒聽到請按「取消」並先開啟音量。');
+            if (!heard) {
+                showSoundWarning('你目前可能是靜音或音量過低，請先開啟手機媒體音量再開始計時。');
+                return false;
+            }
+
+            hideSoundWarning();
+            return true;
+        }
+
         function playBeepGroup() {
             if (!audioCtx) return;
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -312,10 +407,7 @@
             }
         }
 
-        function startTimer() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-
+        async function startTimer() {
             if (isRunning) {
                 clearInterval(timer);
                 isRunning = false;
@@ -325,12 +417,19 @@
             }
 
             if (leftSeconds <= 0) {
-                const mm = Math.round(minScroll.scrollTop / 50) || 0;
-                const ss = Math.round(secScroll.scrollTop / 50) || 0;
-                leftSeconds = Math.min(mm, 99) * 60 + Math.min(ss, 59);
+                const mm = Math.round(minScroll.scrollTop / ITEM_HEIGHT) || 0;
+                const ss = Math.round(secScroll.scrollTop / ITEM_HEIGHT) || 0;
+                leftSeconds = Math.min(mm, 59) * 60 + Math.min(ss, 59);
+                soundCheckedThisRun = false;
             }
 
             if (leftSeconds <= 0) return;
+
+            if (!soundCheckedThisRun) {
+                const ready = await ensureSoundReady();
+                if (!ready) return;
+                soundCheckedThisRun = true;
+            }
 
             isRunning = true;
             // 切換顯示模式
@@ -354,6 +453,7 @@
             isRunning = false;
             alarmClock.classList.add('ringing');
             alarmMask.classList.remove('hidden');
+            alarmMask.classList.add('flex');
             playBeepGroup();
             alarmLoop = setInterval(playBeepGroup, 1200);
         }
@@ -363,23 +463,27 @@
             clearInterval(alarmLoop);
             leftSeconds = 0;
             isRunning = false;
+            soundCheckedThisRun = false;
 
             // 恢復顯示模式
             inputArea.classList.remove('hidden');
             countdownDisplay.classList.add('hidden');
 
-            minScroll.scrollTo({ top: 15 * 50, behavior: 'smooth' });
+            minScroll.scrollTo({ top: DEFAULT_MINUTES * ITEM_HEIGHT, behavior: 'smooth' });
             secScroll.scrollTo({ top: 0, behavior: 'smooth' });
             ctrlBtn.textContent = "開始計時";
             ctrlBtn.classList.remove('bg-gray-400');
             ctrlBtn.classList.add('bg-rose-600');
             alarmClock.classList.remove('ringing');
+            alarmMask.classList.add('hidden');
+            alarmMask.classList.remove('flex');
             updateUI();
         }
 
         function stopAlarm() {
             clearInterval(alarmLoop);
             alarmMask.classList.add('hidden');
+            alarmMask.classList.remove('flex');
             reset();
         }
 
