@@ -73,14 +73,20 @@
             user-select: none;
         }
 
-        input[type=number]::-webkit-inner-spin-button,
-        input[type=number]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
+        /* 隱藏捲軸但允許捲動 */
+        .hide-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
-        body::-webkit-scrollbar {
+        .hide-scroll::-webkit-scrollbar {
             display: none;
+        }
+
+        /* 漸層遮罩讓上下邊緣有淡出效果 */
+        .picker-mask {
+            -webkit-mask-image: linear-gradient(to bottom, transparent 5%, black 35%, black 65%, transparent 95%);
+            mask-image: linear-gradient(to bottom, transparent 5%, black 35%, black 65%, transparent 95%);
         }
     </style>
 </head>
@@ -131,19 +137,33 @@
         </div>
 
         <!-- 這裡是輸入區域 (倒數時隱藏) -->
-        <div id="inputArea" class="bg-white p-4 rounded-3xl shadow-sm w-full border border-gray-100 mb-4">
-            <div class="flex justify-center items-center gap-3">
+        <div id="inputArea" class="bg-white p-6 rounded-[2rem] shadow-sm w-full border border-gray-100 mb-4">
+            <div class="flex justify-center items-center gap-4">
+                
+                <!-- 分鐘滾輪 -->
                 <div class="flex flex-col items-center">
-                    <input type="number" id="minIn" value="15" min="0" max="99"
-                        class="w-16 text-3xl font-bold text-center p-1 bg-gray-50 rounded-lg border-b-2 border-rose-500 outline-none">
-                    <span class="text-[9px] font-bold text-gray-400 mt-1 uppercase">Min</span>
+                    <div class="relative w-24 h-[150px] picker-mask bg-gray-50 rounded-2xl border-b-4 border-rose-500 overflow-hidden shadow-inner">
+                        <div class="absolute top-1/2 left-0 w-full h-[50px] -translate-y-1/2 bg-gray-200/50 pointer-events-none rounded-xl border border-gray-300"></div>
+                        <ul id="minScroll" class="absolute inset-0 overflow-y-auto snap-y snap-mandatory hide-scroll m-0 p-0 list-none">
+                            <!-- JS將會在此填入 -->
+                        </ul>
+                    </div>
+                    <span class="text-[11px] font-black text-gray-400 mt-3 tracking-widest uppercase">Min</span>
                 </div>
-                <div class="text-xl font-bold text-gray-300 mb-5">:</div>
+
+                <div class="text-3xl font-bold text-gray-300 mb-6 animate-pulse">:</div>
+
+                <!-- 秒數滾輪 -->
                 <div class="flex flex-col items-center">
-                    <input type="number" id="secIn" value="0" min="0" max="59"
-                        class="w-16 text-3xl font-bold text-center p-1 bg-gray-50 rounded-lg border-b-2 border-rose-500 outline-none">
-                    <span class="text-[9px] font-bold text-gray-400 mt-1 uppercase">Sec</span>
+                    <div class="relative w-24 h-[150px] picker-mask bg-gray-50 rounded-2xl border-b-4 border-rose-500 overflow-hidden shadow-inner">
+                        <div class="absolute top-1/2 left-0 w-full h-[50px] -translate-y-1/2 bg-gray-200/50 pointer-events-none rounded-xl border border-gray-300"></div>
+                        <ul id="secScroll" class="absolute inset-0 overflow-y-auto snap-y snap-mandatory hide-scroll m-0 p-0 list-none">
+                            <!-- JS將會在此填入 -->
+                        </ul>
+                    </div>
+                    <span class="text-[11px] font-black text-gray-400 mt-3 tracking-widest uppercase">Sec</span>
                 </div>
+
             </div>
         </div>
 
@@ -174,8 +194,8 @@
         const sectorPath = document.getElementById('sectorPath');
         const countdownDisplay = document.getElementById('countdownDisplay');
         const inputArea = document.getElementById('inputArea');
-        const minIn = document.getElementById('minIn');
-        const secIn = document.getElementById('secIn');
+        const minScroll = document.getElementById('minScroll');
+        const secScroll = document.getElementById('secScroll');
         const ctrlBtn = document.getElementById('ctrlBtn');
         const clearBtn = document.getElementById('clearBtn');
         const alarmClock = document.getElementById('alarmClock');
@@ -187,6 +207,27 @@
         let isRunning = false;
         let audioCtx = null;
         let alarmLoop = null;
+
+        function initPickers() {
+            let minHtml = '<li class="h-[50px] w-full shrink-0"></li>';
+            for (let i = 0; i < 100; i++) {
+                minHtml += `<li class="h-[50px] w-full flex items-center justify-center text-4xl font-black text-gray-700 snap-center no-select cursor-grab active:cursor-grabbing">${String(i).padStart(2, '0')}</li>`;
+            }
+            minHtml += '<li class="h-[50px] w-full shrink-0"></li>';
+            minScroll.innerHTML = minHtml;
+
+            let secHtml = '<li class="h-[50px] w-full shrink-0"></li>';
+            for (let i = 0; i < 60; i++) {
+                secHtml += `<li class="h-[50px] w-full flex items-center justify-center text-4xl font-black text-gray-700 snap-center no-select cursor-grab active:cursor-grabbing">${String(i).padStart(2, '0')}</li>`;
+            }
+            secHtml += '<li class="h-[50px] w-full shrink-0"></li>';
+            secScroll.innerHTML = secHtml;
+
+            setTimeout(() => {
+                minScroll.scrollTop = 15 * 50;
+                secScroll.scrollTop = 0;
+            }, 50);
+        }
 
         function initDial() {
             for (let i = 0; i < 60; i++) {
@@ -284,9 +325,9 @@
             }
 
             if (leftSeconds <= 0) {
-                const mm = parseInt(minIn.value) || 0;
-                const ss = parseInt(secIn.value) || 0;
-                leftSeconds = mm * 60 + ss;
+                const mm = Math.round(minScroll.scrollTop / 50) || 0;
+                const ss = Math.round(secScroll.scrollTop / 50) || 0;
+                leftSeconds = Math.min(mm, 99) * 60 + Math.min(ss, 59);
             }
 
             if (leftSeconds <= 0) return;
@@ -327,8 +368,8 @@
             inputArea.classList.remove('hidden');
             countdownDisplay.classList.add('hidden');
 
-            minIn.value = 15;
-            secIn.value = 0;
+            minScroll.scrollTo({ top: 15 * 50, behavior: 'smooth' });
+            secScroll.scrollTo({ top: 0, behavior: 'smooth' });
             ctrlBtn.textContent = "開始計時";
             ctrlBtn.classList.remove('bg-gray-400');
             ctrlBtn.classList.add('bg-rose-600');
@@ -346,6 +387,7 @@
         clearBtn.addEventListener('click', reset);
         stopAlarmBtn.addEventListener('click', stopAlarm);
 
+        initPickers();
         initDial();
         updateUI();
     </script>
