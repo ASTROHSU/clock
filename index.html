@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>視覺化計時器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 鈴鐺震動動畫 */
+        @keyframes bell-shake {
+            0%, 100% { transform: rotate(0deg); }
+            20% { transform: rotate(15deg); }
+            40% { transform: rotate(-15deg); }
+            60% { transform: rotate(12deg); }
+            80% { transform: rotate(-12deg); }
+        }
+        /* 機身震動動畫 */
+        @keyframes body-vibrate {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(2px, -1px); }
+            50% { transform: translate(-2px, 1px); }
+            75% { transform: translate(2px, 1px); }
+            100% { transform: translate(0, 0); }
+        }
+        .ringing .bell-left { animation: bell-shake 0.12s infinite; transform-origin: 40px 45px; }
+        .ringing .bell-right { animation: bell-shake 0.12s infinite reverse; transform-origin: 80px 45px; }
+        .ringing .clock-body { animation: body-vibrate 0.08s infinite; }
+        
+        .no-select { user-select: none; }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+        body::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-center p-4 no-select">
+
+    <!-- 鬧鐘主體：保持大尺寸 -->
+    <div id="alarmClock" class="relative w-full max-w-[450px] aspect-[120/140] mb-4 transition-transform duration-200">
+        <svg viewBox="0 0 120 140" class="w-full h-full drop-shadow-2xl overflow-visible clock-body">
+            <!-- 支腳 -->
+            <path d="M30 115 L20 132" stroke="#334155" stroke-width="5" stroke-linecap="round" />
+            <path d="M90 115 L100 132" stroke="#334155" stroke-width="5" stroke-linecap="round" />
+            
+            <!-- 提把 -->
+            <path d="M48 22 Q 60 10 72 22" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" />
+
+            <!-- 左鈴鐺 -->
+            <g class="bell-left">
+                <path d="M18 42 A 18 18 0 0 1 50 42 Z" fill="#475569" stroke="#1e293b" stroke-width="2" />
+            </g>
+            <!-- 右鈴鐺 -->
+            <g class="bell-right">
+                <path d="M70 42 A 18 18 0 0 1 102 42 Z" fill="#475569" stroke="#1e293b" stroke-width="2" />
+            </g>
+
+            <!-- 鬧鐘主體邊框 -->
+            <circle cx="60" cy="80" r="52" fill="#334155" />
+            <!-- 錶盤 -->
+            <circle cx="60" cy="80" r="48" fill="white" />
+
+            <!-- 錶盤刻度與數字 -->
+            <g id="dialContent"></g>
+
+            <!-- 紅色扇形進度 (參考圖片風格) -->
+            <path id="sectorPath" fill="#e11d48" d="" />
+            
+            <!-- 中心點：現在不會與數字重疊 -->
+            <circle cx="60" cy="80" r="2.5" fill="#e11d48" />
+        </svg>
+    </div>
+
+    <!-- 數位倒數顯示與控制區 -->
+    <div class="flex flex-col items-center w-full max-w-[320px]">
+        
+        <!-- 這裡是數字顯示區域 (平時隱藏，倒數時顯示) -->
+        <div id="countdownDisplay" class="hidden text-7xl font-black text-rose-600 mb-6 tracking-tight">
+            15:00
+        </div>
+
+        <!-- 這裡是輸入區域 (倒數時隱藏) -->
+        <div id="inputArea" class="bg-white p-4 rounded-3xl shadow-sm w-full border border-gray-100 mb-4">
+            <div class="flex justify-center items-center gap-3">
+                <div class="flex flex-col items-center">
+                    <input type="number" id="minIn" value="15" min="0" max="99" class="w-16 text-3xl font-bold text-center p-1 bg-gray-50 rounded-lg border-b-2 border-rose-500 outline-none">
+                    <span class="text-[9px] font-bold text-gray-400 mt-1 uppercase">Min</span>
+                </div>
+                <div class="text-xl font-bold text-gray-300 mb-5">:</div>
+                <div class="flex flex-col items-center">
+                    <input type="number" id="secIn" value="0" min="0" max="59" class="w-16 text-3xl font-bold text-center p-1 bg-gray-50 rounded-lg border-b-2 border-rose-500 outline-none">
+                    <span class="text-[9px] font-bold text-gray-400 mt-1 uppercase">Sec</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 按鈕控制 -->
+        <div class="w-full space-y-2">
+            <button id="ctrlBtn" class="w-full bg-rose-600 hover:bg-rose-500 text-white py-4 rounded-3xl text-xl font-black transition-all shadow-md active:scale-95">
+                開始計時
+            </button>
+            <button id="clearBtn" class="w-full text-gray-300 hover:text-gray-500 font-bold text-xs py-1 transition-colors">
+                RESET
+            </button>
+        </div>
+    </div>
+
+    <!-- 鬧鐘響起遮罩 -->
+    <div id="alarmMask" class="fixed inset-0 bg-white/95 hidden flex-col items-center justify-center z-50">
+        <div class="text-rose-600 text-5xl font-black mb-12 animate-bounce">時間到了！</div>
+        <button id="stopAlarmBtn" class="bg-rose-600 text-white px-16 py-8 rounded-full text-3xl font-black shadow-2xl active:scale-90 transition-transform">
+            停止響鈴
+        </button>
+    </div>
+
+    <script>
+        const dialContent = document.getElementById('dialContent');
+        const sectorPath = document.getElementById('sectorPath');
+        const countdownDisplay = document.getElementById('countdownDisplay');
+        const inputArea = document.getElementById('inputArea');
+        const minIn = document.getElementById('minIn');
+        const secIn = document.getElementById('secIn');
+        const ctrlBtn = document.getElementById('ctrlBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const alarmClock = document.getElementById('alarmClock');
+        const alarmMask = document.getElementById('alarmMask');
+        const stopAlarmBtn = document.getElementById('stopAlarmBtn');
+
+        let leftSeconds = 0;
+        let timer = null;
+        let isRunning = false;
+        let audioCtx = null;
+        let alarmLoop = null;
+
+        function initDial() {
+            for (let i = 0; i < 60; i++) {
+                const angleDeg = i * 6 - 90;
+                const angleRad = angleDeg * (Math.PI / 180);
+                const isMajor = i % 5 === 0;
+                
+                const rIn = isMajor ? 41 : 44;
+                const rOut = 48;
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", 60 + rIn * Math.cos(angleRad));
+                line.setAttribute("y1", 80 + rIn * Math.sin(angleRad));
+                line.setAttribute("x2", 60 + rOut * Math.cos(angleRad));
+                line.setAttribute("y2", 80 + rOut * Math.sin(angleRad));
+                line.setAttribute("stroke", isMajor ? "#e11d48" : "#cbd5e1");
+                line.setAttribute("stroke-width", isMajor ? "1" : "0.5");
+                dialContent.appendChild(line);
+
+                if (isMajor) {
+                    const rText = 34;
+                    const tx = 60 + rText * Math.cos(angleRad);
+                    const ty = 80 + rText * Math.sin(angleRad);
+                    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    text.setAttribute("x", tx);
+                    text.setAttribute("y", ty);
+                    text.setAttribute("fill", "#e11d48");
+                    text.setAttribute("font-size", "7.5");
+                    text.setAttribute("font-weight", "900");
+                    text.setAttribute("text-anchor", "middle");
+                    text.setAttribute("dominant-baseline", "middle");
+                    text.textContent = i === 0 ? "0" : i;
+                    dialContent.appendChild(text);
+                }
+            }
+        }
+
+        function updateUI() {
+            const m = Math.floor(leftSeconds / 60);
+            const s = leftSeconds % 60;
+            const timeText = \`\${String(m).padStart(2, '0')}:\${String(s).padStart(2, '0')}\`;
+            countdownDisplay.textContent = timeText;
+
+            const ratio = Math.min(leftSeconds / 3600, 1);
+            const angle = ratio * 360;
+            
+            if (leftSeconds <= 0) {
+                sectorPath.setAttribute("d", "");
+            } else if (angle >= 359.9) {
+                sectorPath.setAttribute("d", "M 60 80 L 60 32 A 48 48 0 1 1 59.9 32 Z");
+            } else {
+                const endRad = (angle - 90) * (Math.PI / 180);
+                const x = 60 + 48 * Math.cos(endRad);
+                const y = 80 + 48 * Math.sin(endRad);
+                const largeArc = angle > 180 ? 1 : 0;
+                const d = \`M 60 80 L 60 32 A 48 48 0 \${largeArc} 1 \${x} \${y} Z\`;
+                sectorPath.setAttribute("d", d);
+            }
+        }
+
+        function playBeepGroup() {
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const now = audioCtx.currentTime;
+            for (let i = 0; i < 4; i++) {
+                const startTime = now + (i * 0.16);
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'square'; 
+                osc.frequency.setValueAtTime(1000, startTime); 
+
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.15, startTime + 0.01);
+                gain.gain.linearRampToValueAtTime(0, startTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(startTime);
+                osc.stop(startTime + 0.1);
+            }
+        }
+
+        function startTimer() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            if (isRunning) {
+                clearInterval(timer);
+                isRunning = false;
+                ctrlBtn.textContent = "繼續計時";
+                ctrlBtn.classList.replace('bg-gray-400', 'bg-rose-600');
+                return;
+            }
+
+            if (leftSeconds <= 0) {
+                const mm = parseInt(minIn.value) || 0;
+                const ss = parseInt(secIn.value) || 0;
+                leftSeconds = mm * 60 + ss;
+            }
+
+            if (leftSeconds <= 0) return;
+
+            isRunning = true;
+            // 切換顯示模式
+            inputArea.classList.add('hidden');
+            countdownDisplay.classList.remove('hidden');
+            
+            ctrlBtn.textContent = "暫停";
+            ctrlBtn.classList.replace('bg-rose-600', 'bg-gray-400');
+
+            timer = setInterval(() => {
+                leftSeconds--;
+                updateUI();
+                if (leftSeconds <= 0) {
+                    clearInterval(timer);
+                    triggerAlarm();
+                }
+            }, 1000);
+        }
+
+        function triggerAlarm() {
+            isRunning = false;
+            alarmClock.classList.add('ringing');
+            alarmMask.classList.remove('hidden');
+            playBeepGroup();
+            alarmLoop = setInterval(playBeepGroup, 1200);
+        }
+
+        function reset() {
+            clearInterval(timer);
+            clearInterval(alarmLoop);
+            leftSeconds = 0;
+            isRunning = false;
+            
+            // 恢復顯示模式
+            inputArea.classList.remove('hidden');
+            countdownDisplay.classList.add('hidden');
+            
+            minIn.value = 15;
+            secIn.value = 0;
+            ctrlBtn.textContent = "開始計時";
+            ctrlBtn.classList.remove('bg-gray-400');
+            ctrlBtn.classList.add('bg-rose-600');
+            alarmClock.classList.remove('ringing');
+            updateUI();
+        }
+
+        function stopAlarm() {
+            clearInterval(alarmLoop);
+            alarmMask.classList.add('hidden');
+            reset();
+        }
+
+        ctrlBtn.addEventListener('click', startTimer);
+        clearBtn.addEventListener('click', reset);
+        stopAlarmBtn.addEventListener('click', stopAlarm);
+
+        initDial();
+        updateUI();
+    </script>
+</body>
+</html>
