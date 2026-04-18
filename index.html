@@ -177,11 +177,14 @@
                 class="w-full text-gray-300 hover:text-gray-500 font-bold text-xs py-1 transition-colors">
                 RESET
             </button>
+            <div id="soundWarning"
+                class="hidden w-full rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-bold leading-6 text-amber-700">
+            </div>
         </div>
     </div>
 
     <!-- 鬧鐘響起遮罩 -->
-    <div id="alarmMask" class="fixed inset-0 bg-white/95 hidden flex-col items-center justify-center z-50">
+    <div id="alarmMask" class="fixed inset-0 bg-white/95 hidden flex-col items-center justify-center z-50 p-6 text-center">
         <div class="text-rose-600 text-5xl font-black mb-12 animate-bounce">時間到了！</div>
         <button id="stopAlarmBtn"
             class="bg-rose-600 text-white px-16 py-8 rounded-full text-3xl font-black shadow-2xl active:scale-90 transition-transform">
@@ -201,12 +204,14 @@
         const alarmClock = document.getElementById('alarmClock');
         const alarmMask = document.getElementById('alarmMask');
         const stopAlarmBtn = document.getElementById('stopAlarmBtn');
+        const soundWarning = document.getElementById('soundWarning');
 
         let leftSeconds = 0;
         let timer = null;
         let isRunning = false;
         let audioCtx = null;
         let alarmLoop = null;
+        let soundCheckedThisRun = false;
 
         function initPickers() {
             let minHtml = '<li class="h-[50px] w-full shrink-0"></li>';
@@ -287,6 +292,78 @@
             }
         }
 
+        function showSoundWarning(message) {
+            soundWarning.textContent = message;
+            soundWarning.classList.remove('hidden');
+        }
+
+        function hideSoundWarning() {
+            soundWarning.textContent = '';
+            soundWarning.classList.add('hidden');
+        }
+
+        async function playPreviewBeep() {
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, now);
+
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.18, now + 0.01);
+            gain.gain.linearRampToValueAtTime(0, now + 0.22);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.25);
+
+            await new Promise((resolve) => setTimeout(resolve, 260));
+        }
+
+        async function ensureSoundReady() {
+            const AudioCtor = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtor) {
+                showSoundWarning('此裝置不支援聲音播放，請改用支援音訊的瀏覽器。');
+                return false;
+            }
+
+            if (!audioCtx) {
+                audioCtx = new AudioCtor();
+            }
+
+            try {
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+                await playPreviewBeep();
+            } catch (error) {
+                showSoundWarning('目前無法播放測試音，請先開啟手機媒體音量或關閉靜音模式。');
+                alert('目前無法播放測試音，請先開啟手機媒體音量或關閉靜音模式後再開始計時。');
+                return false;
+            }
+
+            if (audioCtx.state !== 'running') {
+                showSoundWarning('音訊尚未啟用，請確認手機聲音已開啟，再重新開始計時。');
+                return false;
+            }
+
+            const heard = window.confirm('已播放測試音。若有聽到聲音請按「確定」，沒聽到請按「取消」並先開啟音量。');
+            if (!heard) {
+                showSoundWarning('你目前可能是靜音或音量過低，請先開啟手機媒體音量再開始計時。');
+                return false;
+            }
+
+            hideSoundWarning();
+            return true;
+        }
+
         function playBeepGroup() {
             if (!audioCtx) return;
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -312,10 +389,7 @@
             }
         }
 
-        function startTimer() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-
+        async function startTimer() {
             if (isRunning) {
                 clearInterval(timer);
                 isRunning = false;
@@ -328,9 +402,16 @@
                 const mm = Math.round(minScroll.scrollTop / 50) || 0;
                 const ss = Math.round(secScroll.scrollTop / 50) || 0;
                 leftSeconds = Math.min(mm, 99) * 60 + Math.min(ss, 59);
+                soundCheckedThisRun = false;
             }
 
             if (leftSeconds <= 0) return;
+
+            if (!soundCheckedThisRun) {
+                const ready = await ensureSoundReady();
+                if (!ready) return;
+                soundCheckedThisRun = true;
+            }
 
             isRunning = true;
             // 切換顯示模式
@@ -354,6 +435,7 @@
             isRunning = false;
             alarmClock.classList.add('ringing');
             alarmMask.classList.remove('hidden');
+            alarmMask.classList.add('flex');
             playBeepGroup();
             alarmLoop = setInterval(playBeepGroup, 1200);
         }
@@ -363,6 +445,7 @@
             clearInterval(alarmLoop);
             leftSeconds = 0;
             isRunning = false;
+            soundCheckedThisRun = false;
 
             // 恢復顯示模式
             inputArea.classList.remove('hidden');
@@ -374,12 +457,15 @@
             ctrlBtn.classList.remove('bg-gray-400');
             ctrlBtn.classList.add('bg-rose-600');
             alarmClock.classList.remove('ringing');
+            alarmMask.classList.add('hidden');
+            alarmMask.classList.remove('flex');
             updateUI();
         }
 
         function stopAlarm() {
             clearInterval(alarmLoop);
             alarmMask.classList.add('hidden');
+            alarmMask.classList.remove('flex');
             reset();
         }
 
